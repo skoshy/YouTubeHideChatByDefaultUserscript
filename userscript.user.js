@@ -5,6 +5,7 @@
 // @description  Hides chat on YouTube live streams by default
 // @author       Stefan K.
 // @match        https://*.youtube.com/watch*
+// @updateURL    https://github.com/skoshy/YouTubeHideChatByDefaultUserscript/raw/master/userscript.user.js
 // @grant        none
 // ==/UserScript==
 
