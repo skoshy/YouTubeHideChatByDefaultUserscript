@@ -1,32 +1,76 @@
 // ==UserScript==
 // @name         YouTube Hide Chat by Default
 // @namespace    https://skoshy.com
-// @version      0.1.0
+// @version      0.2.0
 // @description  Hides chat on YouTube live streams by default
 // @author       Stefan K.
-// @match        https://*.youtube.com/watch*
+// @match        https://*.youtube.com/*
 // @updateURL    https://github.com/skoshy/YouTubeHideChatByDefaultUserscript/raw/master/userscript.user.js
 // @grant        none
 // ==/UserScript==
 
-const MAX_TRIES = 30;
+const scriptId = "youtube-hide-chat-by-default";
+const buttonSelector = "paper-button";
 
 (function() {
-    'use strict';
+  "use strict";
 
-    let tries = 0;
-    let interval = setInterval(() => {
-        tries++;
+  function log(...toLog) {
+    console.log(`[${scriptId}]:`, ...toLog);
+  }
 
-        const button = document.querySelector('.ytd-live-chat-frame paper-button');
-        if (button && button.innerText === 'HIDE CHAT') {
-            console.log('Hid chat');
-            button.click();
-            clearInterval(interval);
-        }
+  function setAndGetNodeId(node) {
+    const nodeIdString = `${scriptId}-id`;
 
-        if (tries > MAX_TRIES) {
-            clearInterval(interval);
-        }
-    }, 500);
+    let nodeId = node.getAttribute(nodeIdString);
+    let hadNodeIdSet = true;
+
+    // log("new node found", { nodeId, hadNodeIdSet, node });
+
+    if (!nodeId) {
+      hadNodeIdSet = false;
+      nodeId = Math.random().toString();
+      node.setAttribute(nodeIdString, nodeId);
+    }
+
+    return { nodeId, hadNodeIdSet };
+  }
+
+  function addedNodeHandler(node) {
+    if (!node.matches || !node.matches(buttonSelector)) {
+      return;
+    }
+
+    const { nodeId, hadNodeIdSet } = setAndGetNodeId(node);
+
+    if (!hadNodeIdSet) {
+      // this is a new element
+
+      if (node.innerText === "HIDE CHAT") {
+        node.click();
+        log(`Hid the chat by default`);
+      }
+    }
+  }
+
+  var bodyObserver = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      mutation.addedNodes.forEach(addedNode => {
+        addedNodeHandler(addedNode);
+
+        // it might be text node or comment node which don't have querySelectorAll
+        addedNode.querySelectorAll &&
+          addedNode.querySelectorAll(buttonSelector).forEach(addedNodeHandler);
+      });
+    });
+  });
+
+  var bodyObserverConfig = {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    characterData: true
+  };
+
+  bodyObserver.observe(document.body, bodyObserverConfig);
 })();
