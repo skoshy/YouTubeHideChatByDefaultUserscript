@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Hide Chat by Default
 // @namespace    https://skoshy.com
-// @version      0.2.0
+// @version      0.2.1
 // @description  Hides chat on YouTube live streams by default
 // @author       Stefan K.
 // @match        https://*.youtube.com/*
@@ -9,11 +9,11 @@
 // @grant        none
 // ==/UserScript==
 
-const scriptId = "youtube-hide-chat-by-default";
-const buttonSelector = "paper-button";
-
 (function() {
   "use strict";
+
+  const scriptId = "youtube-hide-chat-by-default";
+  const buttonSelector = "paper-button";
 
   function log(...toLog) {
     console.log(`[${scriptId}]:`, ...toLog);
@@ -53,7 +53,7 @@ const buttonSelector = "paper-button";
     }
   }
 
-  var bodyObserver = new MutationObserver(function(mutations) {
+  const bodyObserver = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
       mutation.addedNodes.forEach(addedNode => {
         addedNodeHandler(addedNode);
@@ -65,12 +65,10 @@ const buttonSelector = "paper-button";
     });
   });
 
-  var bodyObserverConfig = {
+  bodyObserver.observe(document.body, {
     attributes: true,
     childList: true,
     subtree: true,
     characterData: true
-  };
-
-  bodyObserver.observe(document.body, bodyObserverConfig);
+  });
 })();
