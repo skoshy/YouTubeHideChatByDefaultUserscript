@@ -7,6 +7,7 @@
 // @match        https://*.youtube.com/*
 // @updateURL    https://github.com/skoshy/YouTubeHideChatByDefaultUserscript/raw/master/userscript.user.js
 // @grant        none
+// @icon         https://youtube.com/favicon.ico
 // ==/UserScript==
 
 (function() {
