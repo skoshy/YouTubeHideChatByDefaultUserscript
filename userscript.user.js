@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Hide Chat by Default
 // @namespace    https://skoshy.com
-// @version      0.2.1
+// @version      0.2.2
 // @description  Hides chat on YouTube live streams by default
 // @author       Stefan K.
 // @match        https://*.youtube.com/*
@@ -46,7 +46,7 @@
     if (!hadNodeIdSet) {
       // this is a new element
 
-      if (node.innerText === "HIDE CHAT") {
+      if (node.innerText.toUpperCase().trim() === "HIDE CHAT") {
         node.click();
         log(`Hid the chat by default`);
       }
