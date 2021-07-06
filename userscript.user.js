@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Hide Chat by Default
 // @namespace    https://skoshy.com
-// @version      0.3.1
+// @version      0.4.0
 // @description  Hides chat on YouTube live streams by default
 // @author       Stefan K.
 // @match        https://*.youtube.com/*
@@ -9,6 +9,8 @@
 // @grant        none
 // @icon         https://youtube.com/favicon.ico
 // ==/UserScript==
+
+window.mut = [];
 
 (function() {
   "use strict";
@@ -20,7 +22,7 @@
   // - for different languages for the HIDE CHAT text, add them here
   const hideChatTexts = [
     'HIDE CHAT', // english
-    'HIDE CHAT REPLAY', // english - replay
+    'HIDE CHAT REPLAY', // english, chat replay
     'OCULTAR CHAT', // spanish
     'MASQUER LA CONVERSATION PAR CHAT', // french
     'MASQUER LE CLAVARDAGE', // french canada
@@ -38,21 +40,44 @@
     console.log(`[${scriptId}]:`, ...toLog);
   }
 
-  function setAndGetNodeId(node) {
+  function getUrlSearchParams() {
+    return new URLSearchParams(document.location.search.substring(1));
+  }
+
+  function isHideChatButton(node) {
+    return hideChatTexts.includes(node.innerText.toUpperCase().trim());
+  }
+
+  function setAndGetNodeId(node, setIdTo) {
     const nodeIdString = `${scriptId}-id`;
 
-    let nodeId = node.getAttribute(nodeIdString);
-    let hadNodeIdSet = true;
+    let originalNodeId = node.getAttribute(nodeIdString);
 
-    // log("new node found", { nodeId, hadNodeIdSet, node });
+    const nodeId = setIdTo ? setIdTo : Math.random().toString();
+    node.setAttribute(nodeIdString, nodeId);
 
-    if (!nodeId) {
-      hadNodeIdSet = false;
-      nodeId = Math.random().toString();
-      node.setAttribute(nodeIdString, nodeId);
-    }
+    return { originalNodeId, nodeId };
+  }
 
-    return { nodeId, hadNodeIdSet };
+
+  let buttonObserver = {
+      observer: null,
+      node: null,
+      debouncedTimeout: null,
+  };
+
+  function buttonObserverHandler(mutations) {
+    clearTimeout(buttonObserver.debouncedTimeout);
+    buttonObserver.debouncedTimeout = setTimeout(() => {
+        if (isHideChatButton(buttonObserver.node)) {
+            log(buttonObserver.node);
+            const { nodeId, originalNodeId } = setAndGetNodeId(buttonObserver.node, getUrlSearchParams().get('v'));
+            log('found hide chat button', nodeId, originalNodeId);
+            return;
+            if (originalNodeId === nodeId) return; // we've already automatically triggered hide chat
+            buttonObserver.node.click();
+        }
+    }, 50);
   }
 
   function addedNodeHandler(node) {
@@ -63,30 +88,48 @@
       return;
     }
 
-    const { nodeId, hadNodeIdSet } = setAndGetNodeId(node);
+    const { nodeId, originalNodeId } = setAndGetNodeId(node, getUrlSearchParams().get('v'));
+    // log(nodeId, originalNodeId);
 
-    if (!hadNodeIdSet) {
-      // this is a new element
+    if (originalNodeId === nodeId) return; // we've already automatically triggered hide chat
 
-      if (hideChatTexts.includes(node.innerText.toUpperCase().trim())) {
-        node.click();
-        log(`Hid the chat by default`);
+    if (isHideChatButton(node)) {
+      node.click();
+      log(`Hid the chat by default`);
+
+      if (!buttonObserver.observer) {
+        buttonObserver.observer = new MutationObserver(buttonObserverHandler);
+        buttonObserver.node = node;
+
+        buttonObserver.observer.observe(node, {
+          attributes: true,
+          childList: true,
+          subtree: true,
+          characterData: true
+        });
       }
     }
   }
 
   const bodyObserver = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
+      const newNodes = [];
+      window.mut.push(mutation);
+
       mutation.addedNodes.forEach(addedNode => {
-        addedNodeHandler(addedNode);
+        newNodes.push(addedNode);
 
         // it might be text node or comment node which don't have querySelectorAll
         if (addedNode.querySelectorAll) {
           buttonSelectors.forEach(bs => {
-            addedNode.querySelectorAll(bs).forEach(addedNodeHandler);
-          })
+            addedNode.querySelectorAll(bs).forEach((n) => {
+              newNodes.push(n);
+            });
+          });
         }
       });
+
+      newNodes.forEach(n => addedNodeHandler(n));
     });
   });
 
