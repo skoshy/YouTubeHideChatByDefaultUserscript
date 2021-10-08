@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Hide Chat by Default
 // @namespace    https://skoshy.com
-// @version      0.4.0
+// @version      0.5.0
 // @description  Hides chat on YouTube live streams by default
 // @author       Stefan K.
 // @match        https://*.youtube.com/*
@@ -9,8 +9,6 @@
 // @grant        none
 // @icon         https://youtube.com/favicon.ico
 // ==/UserScript==
-
-window.mut = [];
 
 (function() {
   "use strict";
@@ -36,6 +34,8 @@ window.mut = [];
     '隱藏即時通訊', // zh-Hant-TW and zh-Hant-HK
   ];
 
+  const nodeIdString = `${scriptId}-id`;
+
   function log(...toLog) {
     console.log(`[${scriptId}]:`, ...toLog);
   }
@@ -48,10 +48,14 @@ window.mut = [];
     return hideChatTexts.includes(node.innerText.toUpperCase().trim());
   }
 
-  function setAndGetNodeId(node, setIdTo) {
-    const nodeIdString = `${scriptId}-id`;
+  function getNodeId(node) {
+    let nodeId = node.getAttribute(nodeIdString);
 
-    let originalNodeId = node.getAttribute(nodeIdString);
+    return nodeId;
+  }
+
+  function setAndGetNodeId(node, setIdTo) {
+    const originalNodeId = getNodeId(node);
 
     const nodeId = setIdTo ? setIdTo : Math.random().toString();
     node.setAttribute(nodeIdString, nodeId);
@@ -59,62 +63,47 @@ window.mut = [];
     return { originalNodeId, nodeId };
   }
 
-
-  let buttonObserver = {
-      observer: null,
-      node: null,
-      debouncedTimeout: null,
-  };
-
-  function buttonObserverHandler(mutations) {
-    clearTimeout(buttonObserver.debouncedTimeout);
-    buttonObserver.debouncedTimeout = setTimeout(() => {
-        if (isHideChatButton(buttonObserver.node)) {
-            log(buttonObserver.node);
-            const { nodeId, originalNodeId } = setAndGetNodeId(buttonObserver.node, getUrlSearchParams().get('v'));
-            log('found hide chat button', nodeId, originalNodeId);
-            return;
-            if (originalNodeId === nodeId) return; // we've already automatically triggered hide chat
-            buttonObserver.node.click();
-        }
-    }, 50);
-  }
-
   function addedNodeHandler(node) {
-    if (!(
-        node.matches &&
-        buttonSelectors.some(b => node.matches(b))
-    )) {
+    if (
+      !node.matches ||
+      !buttonSelectors.some(b => node.matches(b))
+    ) {
       return;
     }
 
-    const { nodeId, originalNodeId } = setAndGetNodeId(node, getUrlSearchParams().get('v'));
-    // log(nodeId, originalNodeId);
-
-    if (originalNodeId === nodeId) return; // we've already automatically triggered hide chat
-
     if (isHideChatButton(node)) {
-      node.click();
-      log(`Hid the chat by default`);
+      const { nodeId, originalNodeId } = setAndGetNodeId(node, getUrlSearchParams().get('v'));
 
-      if (!buttonObserver.observer) {
-        buttonObserver.observer = new MutationObserver(buttonObserverHandler);
-        buttonObserver.node = node;
+      if (originalNodeId === nodeId) return; // we've already automatically triggered hide chat
 
-        buttonObserver.observer.observe(node, {
-          attributes: true,
-          childList: true,
-          subtree: true,
-          characterData: true
-        });
-      }
+      log(`Hid the chat by default`, document.querySelector('yt-live-chat-message-input-renderer'));
+
+      const tryToHideChatDetails = {
+        interval: null,
+        triedAttempts: 0,
+      };
+
+      tryToHideChatDetails.interval = setInterval(() => {
+        tryToHideChatDetails.triedAttempts++;
+
+        if (document.querySelector('ytd-live-chat-frame iframe')?.offsetHeight ?? 0 > 0) {
+          log('Clicking again because live chat still there');
+          node.click();
+          tryToHideChatDetails.triedAttempts = 0;
+        }
+
+        if (tryToHideChatDetails.triedAttempts > 6) {
+          clearInterval(tryToHideChatDetails.interval);
+        }
+      }, 250);
+
+      return;
     }
   }
 
   const bodyObserver = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
       const newNodes = [];
-      window.mut.push(mutation);
 
       mutation.addedNodes.forEach(addedNode => {
         newNodes.push(addedNode);
@@ -132,6 +121,12 @@ window.mut = [];
       newNodes.forEach(n => addedNodeHandler(n));
     });
   });
+
+  setInterval(() =>
+    Array.from(
+      document.querySelectorAll(buttonSelectors.join(', '))
+    ).forEach(n => addedNodeHandler(n))
+  , 3000);
 
   bodyObserver.observe(document.body, {
     attributes: true,
