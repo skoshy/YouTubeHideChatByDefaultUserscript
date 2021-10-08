@@ -6,9 +6,13 @@ You can also download this from GreasyFork - https://greasyfork.org/en/scripts/3
 
 ## Known issues
 
-- When navigating to another live-stream from a currently playing one, the newly loaded live stream may not have its chat hidden by default (if the page soft-navigating)
+- ~~When navigating to another live-stream from a currently playing one, the newly loaded live stream may not have its chat hidden by default (if the page soft-navigating)~~ should be solved with 0.5.0
 
 ## Changelog
+
+### 0.5.0
+
+- Should fix some random bugs with the script, and should properly hide chat initially when soft-navigating
 
 ### 0.3.0
 
