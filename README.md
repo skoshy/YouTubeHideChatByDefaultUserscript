@@ -10,6 +10,10 @@ You can also download this from GreasyFork - https://greasyfork.org/en/scripts/3
 
 ## Changelog
 
+### 0.6.0
+
+- Fix bugs on new YouTube Layout
+
 ### 0.5.0
 
 - Should fix some random bugs with the script, and should properly hide chat initially when soft-navigating
