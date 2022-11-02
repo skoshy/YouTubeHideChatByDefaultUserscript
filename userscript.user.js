@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Hide Chat by Default
 // @namespace    https://skoshy.com
-// @version      0.6.0
+// @version      0.6.1
 // @description  Hides chat on YouTube live streams by default
 // @author       Stefan K.
 // @match        https://*.youtube.com/*
@@ -16,7 +16,7 @@
 
   // configurable vars
   // - if youtube decides to use a new button type, add it here
-  const buttonSelectors = ["paper-button", "ytd-toggle-button-renderer", "button"];
+  const buttonSelectors = ["button"];
   // - for different languages for the HIDE CHAT text, add them here
   const hideChatTexts = [
     'HIDE CHAT', // english
@@ -72,6 +72,8 @@
     }
 
     if (isHideChatButton(node)) {
+      log(`Found a hide-chat button`, node);
+
       const { nodeId, originalNodeId } = setAndGetNodeId(node, getUrlSearchParams().get('v'));
 
       if (originalNodeId === nodeId) return; // we've already automatically triggered hide chat
