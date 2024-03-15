@@ -6,6 +6,7 @@ You can also download this from GreasyFork - https://greasyfork.org/en/scripts/3
 
 ## Known issues
 
+- Chat will still show for a split second before hiding
 - When navigating to another live-stream from a currently playing one, the newly loaded live stream may not have its chat hidden by default (if the page soft-navigating) (as of 0.7.1)
 
 ## Changelog
