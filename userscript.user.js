@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Hide Chat by Default
 // @namespace    https://skoshy.com
-// @version      0.7.1
+// @version      0.8.0
 // @description  Hides chat on YouTube live streams by default
 // @author       Stefan K.
 // @match        https://www.youtube.com/*
@@ -13,8 +13,15 @@
 
 const scriptId = "youtube-hide-chat-by-default";
 
+const CHANNELS_BLOCKLIST = [
+  // you can place channel IDs here to block them from hiding their chat automatically
+  // example: 'UCTSCjjnCuAPHcfQWNNvULTw'
+];
+
+const isInIframe = () => window.top !== window.self;
+
 const UNIQUE_ID = (function getUniqueId() {
-  if (window.top !== window.self) {
+  if (isInIframe()) {
     const capturedUniqueId = new URL(window.location.href).searchParams.get(`${scriptId}-unique-id`);
 
     if (!capturedUniqueId) {
@@ -84,11 +91,41 @@ const { setVal, getVal } = StorageClass(scriptId, UNIQUE_ID, ['lastVidThatHidCha
     const v = getRootUrlSearchParams().get('v');
 
     if (v) {
+      log('Got Video ID from URL Search Params', v);
       return v;
     }
 
-    // if not the parent frame, then get it from the passed in iframe url params
-    return getRootUrlSearchParams().get(`${scriptId}-current-video-id`);
+    if (isInIframe()) {
+      // if not the parent frame, then get it from the passed in iframe url params
+      const passedThroughId = getRootUrlSearchParams().get(`${scriptId}-current-video-id`);
+      log('Not parent frame, getting video ID from passed through ID', passedThroughId);
+      return passedThroughId;
+    }
+
+    return null;
+  }
+
+  function getCurrentVideoChannelId() {
+    const channelId = document.querySelector('a[aria-label="About"][href*="channel/"]')?.getAttribute('href')?.match(/\/channel\/(.+)[\/$]/)?.[1];
+
+    if (channelId) {
+      return channelId;
+    }
+
+    if (isInIframe()) {
+      // if not the parent frame, then get it from the passed in iframe url params
+      const passedThroughId = getRootUrlSearchParams().get(`${scriptId}-current-channel-id`);
+      log('Not parent frame, getting channel ID from passed through ID', passedThroughId);
+
+      if (passedThroughId === 'null' || !passedThroughId) {
+        log('ERROR: There\'s a problem parsing the Channel ID, blocklist functionality will not work', passedThroughId);
+        return null;
+      }
+
+      return passedThroughId;
+    }
+
+    return null;
   }
 
   function findAncestorOfElement(el, findFunc) {
@@ -137,14 +174,20 @@ const { setVal, getVal } = StorageClass(scriptId, UNIQUE_ID, ['lastVidThatHidCha
       log(`Found a hide-chat button`, node);
 
       const currentVid = getCurrentVideoId();
+      const currentChannelId = getCurrentVideoChannelId();
       const lastVidThatHidChat = getVal('lastVidThatHidChat');
 
       if (lastVidThatHidChat === currentVid) {
-        log(`Already automatically triggered to hide chat for this video`, { lastVidThatHidChat, currentVid });
+        log(`Already automatically triggered to hide chat for this video`, { lastVidThatHidChat, currentVid, currentChannelId });
         return;
       }
 
-      log(`Attempting to hide the chat by default`, { lastVidThatHidChat, currentVid });
+      if (CHANNELS_BLOCKLIST.includes(currentChannelId)) {
+        log(`Channel in blocklist`, { lastVidThatHidChat, currentVid, currentChannelId });
+        return;
+      }
+
+      log(`Attempting to hide the chat by default`, { lastVidThatHidChat, currentVid, currentChannelId });
 
       setVal('lastVidThatHidChat', currentVid);
 
@@ -160,6 +203,7 @@ const { setVal, getVal } = StorageClass(scriptId, UNIQUE_ID, ['lastVidThatHidCha
     const url = new URL(node.src);
     url.searchParams.set(`${scriptId}-unique-id`, UNIQUE_ID);
     url.searchParams.set(`${scriptId}-current-video-id`, getCurrentVideoId());
+    url.searchParams.set(`${scriptId}-current-channel-id`, getCurrentVideoChannelId());
     log('New iFrame URL', url.toString());
 
     node.src = url.toString();
