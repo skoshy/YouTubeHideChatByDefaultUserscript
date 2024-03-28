@@ -11,6 +11,10 @@ You can also download this from GreasyFork - https://greasyfork.org/en/scripts/3
 
 ## Changelog
 
+### 0.8.0
+
+- Added channel blocklist functionality
+
 ### 0.7.1
 
 - Fix bugs with new YouTube layout. Hasn't been tested with our languages other than English.
